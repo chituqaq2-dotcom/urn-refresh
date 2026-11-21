@@ -1,0 +1,17 @@
+// urn-sub: serves URnetwork subscription from KV (binding URN). Content written by urn_refresh.py.
+const KEY = "<subkey>";
+export default {
+  async fetch(req, env) {
+    const u = new URL(req.url);
+    if (u.pathname !== "/" + KEY) return new Response("not found", { status: 404 });
+    const ua = (req.headers.get("user-agent") || "").toLowerCase();
+    const t = u.searchParams.get("target") || "";
+    const h = { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "profile-update-interval": "6", "content-disposition": "inline; filename=URnetwork-US" };
+    let k = "plain";
+    if (t === "clash" || /clash|mihomo|stash|meta/.test(ua)) { k = "clash"; h["content-type"] = "text/yaml; charset=utf-8"; }
+    else if (t === "shadowrocket" || /shadowrocket/.test(ua)) k = "sr";
+    const body = await env.URN.get(k, { cacheTtl: 60 });
+    if (body === null) return new Response("subscription temporarily unavailable", { status: 503, headers: h });
+    return new Response(body, { headers: h });
+  }
+};

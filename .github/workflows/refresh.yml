@@ -1,0 +1,38 @@
+name: urn-refresh
+on:
+  schedule:
+    - cron: "41 3,9,15,21 * * *"   # every 6 h at :41 UTC (11:41/17:41/23:41/05:41 Beijing)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test only (no add/remove/KV writes)"
+        type: boolean
+        default: false
+concurrency:
+  group: urn-refresh
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CF_ACCOUNT_ID: b82cafb09666351f559a8d6a079cabe4
+      KV_NAMESPACE_ID: 01ab3fdf7b5047259e57fec9c298cbdd
+      MAX_NEW: "15"
+      RUNNER: github-actions
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        env:
+          URNETWORK_API_KEY: ${{ secrets.URNETWORK_API_KEY }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          [ -n "$URNETWORK_API_KEY" ] || { echo "::error::secret URNETWORK_API_KEY missing"; exit 1; }
+          [ -n "$CF_API_TOKEN" ] || { echo "::error::secret CF_API_TOKEN missing"; exit 1; }
+      - name: Refresh pool
+        env:
+          URNETWORK_API_KEY: ${{ secrets.URNETWORK_API_KEY }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: python3 urn_refresh.py ${{ inputs.dry_run && '--dry-run' || '' }}
