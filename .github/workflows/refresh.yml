@@ -1,7 +1,7 @@
 name: urn-refresh
 on:
   schedule:
-    - cron: "41 3,9,15,21 * * *"   # every 6 h at :41 UTC (11:41/17:41/23:41/05:41 Beijing)
+    - cron: "41 */2 * * *"   # every 2 h at :41 UTC (user 2026-11-24)
   workflow_dispatch:
     inputs:
       dry_run:
