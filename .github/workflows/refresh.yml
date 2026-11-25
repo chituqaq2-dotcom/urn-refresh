@@ -20,7 +20,8 @@ jobs:
     env:
       CF_ACCOUNT_ID: b82cafb09666351f559a8d6a079cabe4
       KV_NAMESPACE_ID: 01ab3fdf7b5047259e57fec9c298cbdd
-      MAX_NEW: "15"
+      MAX_NEW: "8"
+      TARGET: "1"
       RUNNER: github-actions
     steps:
       - uses: actions/checkout@v4

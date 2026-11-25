@@ -20,7 +20,7 @@ A = "https://api.bringyour.com"; C = "https://api.cloudflare.com/client/v4"
 AC = os.environ.get("CF_ACCOUNT_ID", "b82cafb09666351f559a8d6a079cabe4")
 NS = os.environ.get("KV_NAMESPACE_ID", "01ab3fdf7b5047259e57fec9c298cbdd")
 CFT = os.environ.get("CF_API_TOKEN", "").strip(); URT = os.environ.get("URNETWORK_API_KEY", "").strip()
-TARGET = 5; MIN_BPS = 60_000; MAX_NEW = int(os.environ.get("MAX_NEW", "15"))
+TARGET = int(os.environ.get("TARGET", "1")); MIN_BPS = 60_000; MAX_NEW = int(os.environ.get("MAX_NEW", "8"))
 DRY = "--dry-run" in sys.argv
 KVB = f"{C}/accounts/{AC}/storage/kv/namespaces/{NS}/values/"
 ABBR = {"AT&T": "ATT", "Charter": "Spectrum", "Spectrum": "Spectrum", "Comcast": "Comcast", "Verizon": "Verizon",
@@ -132,7 +132,7 @@ def main():
         with cf.ThreadPoolExecutor(8) as ex: state = list(ex.map(test, state))
         keep = [n for n in state if n["ok"]]; dropped = [n for n in state if not n["ok"]]
         for n in dropped: remove(n)
-        if dropped: save_state(keep)
+        if dropped: save_state(keep); time.sleep(10)
         new_tested = []; tried = 0; exclude = {n["provider"] for n in state}
         if len(keep) < TARGET and not DRY:
             pool = candidates(exclude)
@@ -144,7 +144,11 @@ def main():
                             "proxy_config": {"initial_device_state": {"location": {"connect_location_id": {"client_id": p["client_id"]}}}}})
                     tried += 1; pc = r.get("proxy_config_result") or {}
                     if r.get("error") or not pc.get("socks_proxy_port"):
-                        new_tested.append({"provider": p["client_id"], "ok": False, "err": (r.get("error") or {}).get("message", "no socks")}); continue
+                        msg = (r.get("error") or {}).get("message", "no socks")
+                        new_tested.append({"provider": p["client_id"], "ok": False, "err": msg})
+                        if "a minute" in msg: pool.insert(0, p); time.sleep(65); continue   # free plan: 5 new proxies/min
+                        if "limit of" in msg: pool = []; break                              # free plan active-proxy cap reached
+                        continue
                     batch.append({"provider": p["client_id"], "client_id": r.get("client_id") or pc.get("client_id"), "auth_token": pc["auth_token"],
                                   "proxy_host": pc["proxy_host"], "socks_proxy_port": pc["socks_proxy_port"], "added": int(time.time())})
                 save_state(keep + batch)  # crash-safe: pending clients are recorded so the next run retests/removes them
