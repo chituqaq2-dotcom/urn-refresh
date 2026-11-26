@@ -71,7 +71,8 @@ def test(n):
     g = sh(["curl", "-s", "-m", "10", *X, "-o", "/dev/null", "-w", "%{http_code}", "https://www.google.com/generate_204"], 15)
     try: bps = float(sh(["curl", "-s", "-m", "20", *X, "-o", "/dev/null", "-w", "%{speed_download}", "https://speed.cloudflare.com/__down?bytes=3000000"], 25) or 0)
     except Exception: bps = 0
-    ok = (len(ips) == 3 and len(set(ips)) == 1 and info and info.get("countryCode") == "US" and info.get("proxy") is False
+    ok = (len(ips) >= 2 and len(set(ips)) == 1  # 2026-11-26: 2 of 3 lookups enough (home links jitter)
+          and info and info.get("countryCode") == "US" and info.get("proxy") is False
           and info.get("hosting") is False and info.get("mobile") is False and g == "204" and bps >= MIN_BPS)
     n.update({"ok": bool(ok), "ip": ips[-1] if ips else n.get("ip"), "bps": int(bps), "g204": g})
     if info: n.update({"city": info.get("city"), "region": info.get("regionName"), "isp": info.get("isp"), "as": info.get("as")})
